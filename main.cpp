@@ -3,7 +3,9 @@
 #include <vector>
 #include <cstring> 
 #include <thread>
-using namespace std; 
+#include <chrono>
+using namespace std;
+using namespace std::chrono; 
 
 int p(int i, int j, string s0, string s1, int ma, int mi) 
 {
@@ -85,8 +87,39 @@ void NW_Parallel_AUX(int i, int j, string s0, string s1, int ma, int mi, int g, 
     H[i][j] = res;
 }
 
+void NW_Parallel_AUX2(int i_begin, int j_begin, int i_end, int j_end, string s0, string s1, int ma, int mi, int g, vector<vector<pair<int, pair<int, int>>>>& H, int n, int m)
+{
+    int i = i_begin;
+    int j = j_begin;
+
+    while (i!= i_end && j!=j_end && i!=0 && j!=m) 
+    {
+        pair<int, pair<int, int>> res = {H[i-1][j-1].first + p(i,j,s0,s1,ma,mi),{i-1,j-1}};
+
+        if (H[i][j-1].first + g > res.first) 
+        {
+            res = {H[i][j-1].first + g, {i,j-1}};
+        }
+
+        if (H[i-1][j].first + g > res.first)
+        {
+            res = {H[i-1][j].first + g, {i-1,j}};
+        }
+
+        H[i][j] = res;
+
+        i-=1;
+        j+=1;
+
+    }
+    
+}
+
 vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int ma, int mi, int g)
 {
+
+    unsigned int num_threads = std::thread::hardware_concurrency();
+
     int n = strlen(s0.c_str());
     int m = strlen(s1.c_str());
 
@@ -102,32 +135,32 @@ vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int 
         H[0][j] = {j*g, {0, j-1}};
     }
 
-    std::vector<std::thread> threads(min(n-1,m-1));
+    std::vector<std::thread> threads(num_threads-1);
 
     int i = 1;
     int j = 1;
 
     while (i != n && j!= m)
     {
-        std::cout << "Loop" << std::endl;
-        std::cout << i << " " << j << std::endl;
-        int t = 0;
-        int c_i = i;
-        int c_j = j;
+        int num_elem = min(i,min(n-1,m-1));
 
-        std::cout << "Inner Loop" << std::endl;
+        int batch_size = num_elem/num_threads;
 
-        while (c_i != 0 && c_j != m)
+        int start_block_i = i;
+        int start_block_j = j;
+
+        for (int k =0; k< num_threads-1; k++) 
         {
-            
-            std::cout << c_i << " " << c_j << std::endl;
-            threads[t] = std::thread(NW_Parallel_AUX,c_i,c_j,s0,s1,ma,mi,g,std::ref(H)); 
-            c_i -=1;
-            c_j +=1;
-            t+=1;
+            int end_block_i = start_block_i - batch_size;
+            int end_block_j = start_block_j + batch_size;
+            threads[k] = thread(NW_Parallel_AUX2,start_block_i,start_block_j,end_block_i,end_block_j,s0,s1,ma,mi,g,std::ref(H),n,m);
+            int start_block_i = end_block_i;
+            int start_block_j = end_block_j;
         }
 
-        for (int h=0; h<t; h++) 
+        NW_Parallel_AUX2(start_block_i,start_block_j,start_block_i-num_elem,start_block_j+num_elem,s0,s1,ma,mi,g,std::ref(H),n,m);
+
+        for (int h=0; h<num_threads-1; h++) 
         {
             threads[h].join();
         }
@@ -157,12 +190,59 @@ vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int 
 
 int main() {
 
-    string s0 = "*TAGC";
-    string s1 = "*TAGTC";
+    unsigned int N = 1 << 12;
 
-    vector<vector<pair<int, pair<int, int>>>> H = NW_Parallel(s0,s1,1,-1,-2);
+    string s0 = "*";
+    for (int i = 0; i < N; ++i) {
+        s0 += "T";
+    }
 
-    printMatrix(H);
+    string s1 = "*";
+    for (int i = 0; i < N; ++i) {
+        s1 += "A";
+    }
+
+    // Start timer
+    auto start = high_resolution_clock::now();
+
+    vector<vector<pair<int, pair<int, int>>>> H1 = NW(s0, s1, 1, -1, -2);
+
+    // End timer
+    auto end = high_resolution_clock::now();
+
+    // Calculate duration in milliseconds
+    auto duration = duration_cast<milliseconds>(end - start);
+    cout << "Sequential execution time: " << duration.count() << " ms" << endl;
+
+    // Start timer
+    start = high_resolution_clock::now();
+
+    vector<vector<pair<int, pair<int, int>>>> H2 = NW_Parallel(s0, s1, 1, -1, -2);
+
+    // End timer
+    end = high_resolution_clock::now();
+
+    // Calculate duration in milliseconds
+    duration = duration_cast<milliseconds>(end - start);
+    cout << "Parallel execution time: " << duration.count() << " ms" << endl;
+
+    // printMatrix(H1);
+    // std::cout<< " " << std::endl;
+    // printMatrix(H2);
+
+    std::cout << "Sequential score: " << H1[H1.size() - 1][H1[0].size() - 1].first << std::endl;
+
+    std::cout << "Parallel score: " << H2[H2.size() - 1][H2[0].size() - 1].first << std::endl;
+
+    
+    // std::cout << "Number of hardware threads available: " << threads << std::endl;
+
+    // string s0 = "*TAGC";
+    // string s1 = "*TAGTC";
+
+    // vector<vector<pair<int, pair<int, int>>>> H = NW_Parallel(s0,s1,1,-1,-2);
+
+    // printMatrix(H);
 
     return 0;
 }
