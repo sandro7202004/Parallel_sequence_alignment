@@ -179,63 +179,102 @@ void worker(int& i,int& j, int& working, int& q, int& r, int index, string s0, s
         }
         if (working == 1)
         {
-            if (index < r)
+            if (q==0)
             {
-                int begin_i = i-(q)*index-index;
-                int end_i = i-(q)*(index+1)-index-1;
-                int begin_j = j+(q)*index+index;
-                int end_j = j+(q)*(index+1)+index+1;
-
-                // std::cout << "Thread point i: " << begin_i << " " << end_i << std::endl;
-                // std::cout << "Thread point j: " << begin_j << " " << end_j << std::endl;
-
-                while (begin_i!= end_i && begin_j!=end_j) 
+                if (index < r)
                 {
-                    pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
-
-                    if (H[begin_i][begin_j-1].first + g > res.first) 
+                    if (q==0)
                     {
-                        res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
+                        int begin_i = i-index;
+                        int end_i = i-(index+1);
+                        int begin_j = j+index;
+                        int end_j = j+(index+1);
+
+                        // std::cout << "Thread point i: " << begin_i << " " << end_i << std::endl;
+                        // std::cout << "Thread point j: " << begin_j << " " << end_j << std::endl;
+
+                        while (begin_i!= end_i && begin_j!=end_j) 
+                        {
+                            pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
+
+                            if (H[begin_i][begin_j-1].first + g > res.first) 
+                            {
+                                res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
+                            }
+
+                            if (H[begin_i-1][begin_j].first + g > res.first)
+                            {
+                                res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
+                            }
+
+                            H[begin_i][begin_j] = res;
+
+                            begin_i-=1;
+                            begin_j+=1;
+
+                        }
                     }
-
-                    if (H[begin_i-1][begin_j].first + g > res.first)
-                    {
-                        res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
-                    }
-
-                    H[begin_i][begin_j] = res;
-
-                    begin_i-=1;
-                    begin_j+=1;
-
                 }
             }
-            else
+            else 
             {
-                int begin_i = i-(q)*index-r;
-                int end_i = i-(q)*(index+1)-r;
-                int begin_j = j+(q)*index+r;
-                int end_j = j+(q)*(index+1)+r;
-
-                while (begin_i!= end_i && begin_j!=end_j) 
+                if (index < r)
                 {
-                    pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
+                    int begin_i = i-(q)*index-index;
+                    int end_i = i-(q)*(index+1)-(index+1);
+                    int begin_j = j+(q)*index+index;
+                    int end_j = j+(q)*(index+1)+(index+1);
 
-                    if (H[begin_i][begin_j-1].first + g > res.first) 
+                    // std::cout << "Thread point i: " << begin_i << " " << begin_j << std::endl;
+                    // std::cout << "Thread point j: " << end_i << " " << end_j << std::endl;
+
+                    while (begin_i!= end_i && begin_j!=end_j) 
                     {
-                        res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
-                    }
+                        pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
 
-                    if (H[begin_i-1][begin_j].first + g > res.first)
+                        if (H[begin_i][begin_j-1].first + g > res.first) 
+                        {
+                            res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
+                        }
+
+                        if (H[begin_i-1][begin_j].first + g > res.first)
+                        {
+                            res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
+                        }
+
+                        H[begin_i][begin_j] = res;
+
+                        begin_i-=1;
+                        begin_j+=1;
+                    }
+                }
+                else
+                {
+                    int begin_i = i-(q)*index-r;
+                    int end_i = i-(q)*(index+1)-r;
+                    int begin_j = j+(q)*index+r;
+                    int end_j = j+(q)*(index+1)+r;
+
+                    while (begin_i!= end_i && begin_j!=end_j) 
                     {
-                        res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
+                        pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
+
+                        if (H[begin_i][begin_j-1].first + g > res.first) 
+                        {
+                            res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
+                        }
+
+                        if (H[begin_i-1][begin_j].first + g > res.first)
+                        {
+                            res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
+                        }
+
+                        H[begin_i][begin_j] = res;
+
+                        begin_i-=1;
+                        begin_j+=1;
+
                     }
-
-                    H[begin_i][begin_j] = res;
-
-                    begin_i-=1;
-                    begin_j+=1;
-
                 }
             }
             working = 0;
@@ -305,20 +344,6 @@ vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int 
                 working[k] = 1;
             }
 
-            bool finished = false;
-
-            while(!finished)
-            {
-                int res = 0;
-
-                for (int k = 0; k<r; k++)
-                {
-                    res += working[k];
-                }
-                
-                finished = (res == 0);
-            }
-
         }
 
         else
@@ -330,50 +355,49 @@ vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int 
             {
                 working[k] = 1;
             }
+        }
 
-            if(working[num_threads-1]==1)
+        if(working[num_threads-1]==1)
+        {
+            int begin_i = i-(q)*(num_threads-1)-r;
+            int end_i = i-num_elem;
+            int begin_j = j+(q)*(num_threads-1)+r;
+            int end_j = j+num_elem;
+
+            while (begin_i!= end_i && begin_j!=end_j) 
             {
-                int begin_i = i-(q)*(num_threads-1)-r;
-                int end_i = i-num_elem;
-                int begin_j = j+(q)*(num_threads-1)+r;
-                int end_j = j+num_elem;
+                pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
 
-                while (begin_i!= end_i && begin_j!=end_j) 
+                if (H[begin_i][begin_j-1].first + g > res.first) 
                 {
-                    pair<int, pair<int, int>> res = {H[begin_i-1][begin_j-1].first + p(begin_i,begin_j,s0,s1,ma,mi),{begin_i-1,begin_j-1}};
-
-                    if (H[begin_i][begin_j-1].first + g > res.first) 
-                    {
-                       res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
-                    }
-
-                    if (H[begin_i-1][begin_j].first + g > res.first)
-                    {
-                        res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
-                    }
-
-                    H[begin_i][begin_j] = res;
-
-                    begin_i-=1;
-                    begin_j+=1;
+                   res = {H[begin_i][begin_j-1].first + g, {begin_i,begin_j-1}};
                 }
-                working[num_threads-1] = 0;
+
+                if (H[begin_i-1][begin_j].first + g > res.first)
+                {
+                    res = {H[begin_i-1][begin_j].first + g, {begin_i-1,begin_j}};
+                }
+
+                H[begin_i][begin_j] = res;
+
+                begin_i-=1;
+                begin_j+=1;
             }
+            working[num_threads-1] = 0;
+        }
 
-            bool finished = false;
+        bool finished = false;
 
-            while(!finished)
+        while(!finished)
+        {
+            int res = 0;
+
+            for (int k = 0; k< working.size(); k++)
             {
-                int res = 0;
-
-                for (int k = 0; k<r; k++)
-                {
-                    res += working[k];
-                }
+                res += working[k];
+            }
                 
-                finished = (res == 0);
-            }
-
+            finished = (res == 0);
         }
 
         if (i!= n-1) 
@@ -402,55 +426,34 @@ vector<vector<pair<int, pair<int, int>>>> NW_Parallel(string s0, string s1, int 
 }
 
 int main() {
-
     unsigned int num_threads = std::thread::hardware_concurrency();
-
     std::cout << "Number of hardware threads available: " << num_threads << std::endl;
 
     unsigned int N = 1 << 8;
 
-    // string s0 = "*TAGTC";
     string s0 = "*";
     for (int i = 0; i < N; ++i) {
-        s0 += "T";
+        s0 += "TAGC";
     }
 
-    // string s1 = "*TAGC";
     string s1 = "*";
     for (int i = 0; i < N; ++i) {
-        s1 += "A";
+        s1 += "TAGTC";
     }
 
-    // Start timer
     auto start = high_resolution_clock::now();
-
     vector<vector<pair<int, pair<int, int>>>> H1 = NW(s0, s1, 1, -1, -2);
-
-    // End timer
     auto end = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(end - start);
+    cout << "Sequential execution time: " << duration.count() << " µs" << endl;
 
-    // Calculate duration in milliseconds
-    auto duration = duration_cast<milliseconds>(end - start);
-    cout << "Sequential execution time: " << duration.count() << " ms" << endl;
-
-    // Start timer
     start = high_resolution_clock::now();
-
     vector<vector<pair<int, pair<int, int>>>> H2 = NW_Parallel(s0, s1, 1, -1, -2);
-
-    // End timer
     end = high_resolution_clock::now();
-
-    // Calculate duration in milliseconds
-    duration = duration_cast<milliseconds>(end - start);
-    cout << "Parallel execution time: " << duration.count() << " ms" << endl;
-
-    // printMatrix(H1);
-    // std::cout<< " " << std::endl;
-    // printMatrix(H2);
+    duration = duration_cast<microseconds>(end - start);
+    cout << "Parallel execution time: " << duration.count() << " µs" << endl;
 
     std::cout << "Sequential score: " << H1[H1.size() - 1][H1[0].size() - 1].first << std::endl;
-
     std::cout << "Parallel score: " << H2[H2.size() - 1][H2[0].size() - 1].first << std::endl;
 
     return 0;
