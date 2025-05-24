@@ -49,7 +49,7 @@ vector<int> NW(string s0, string s1, int ma, int mi, int g)
 
 }
 
-void worker(int& i,int& j, int& working, int& q, int& r, int index, string s0, string s1, int ma, int mi, int g, vector<int>& H, int n, int m)
+void worker(int& i,int& j, int& working, bool& computing, bool& initializing_row, bool& initializing_col, int& q, int& r, int index, string s0, string s1, int ma, int mi, int g, vector<int>& H, int n, int m)
 {
     while (true)
     {
@@ -59,78 +59,108 @@ void worker(int& i,int& j, int& working, int& q, int& r, int index, string s0, s
         }
         if (working == 1)
         {
-            // if (q==0)
-            // {
-            //     if (index < r)
-            //     {
-            //         if (q==0)
-            //         {
-            //             int begin_i = i-index;
-            //             int end_i = i-(index+1);
-            //             int begin_j = j+index;
-            //             int end_j = j+(index+1);
-
-            //             // std::cout << "Thread point i: " << begin_i << " " << end_i << std::endl;
-            //             // std::cout << "Thread point j: " << begin_j << " " << end_j << std::endl;
-
-            //             while (begin_i!= end_i && begin_j!=end_j) 
-            //             {
-            //                 int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
-
-            //                 H[begin_i*m + begin_j] = res;
-
-            //                 begin_i-=1;
-            //                 begin_j+=1;
-
-            //             }
-            //         }
-            //     }
-            // }
-            if (index < r)
+            if (computing)
             {
-                    int begin_i = i-(q)*index-index;
-                    int end_i = i-(q)*(index+1)-(index+1);
-                    int begin_j = j+(q)*index+index;
-                    int end_j = j+(q)*(index+1)+(index+1);
+                if (index < r)
+                {
+                        int begin_i = i-(q)*index-index;
+                        int end_i = i-(q)*(index+1)-(index+1);
+                        int begin_j = j+(q)*index+index;
+                        int end_j = j+(q)*(index+1)+(index+1);
 
-                    // std::cout << "Thread point i: " << begin_i << " " << begin_j << std::endl;
-                    // std::cout << "Thread point j: " << end_i << " " << end_j << std::endl;
+                        while (begin_i!= end_i && begin_j!=end_j) 
+                        {
+                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
-                    while (begin_i!= end_i && begin_j!=end_j) 
-                    {
-                        int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+                            H[begin_i*m + begin_j] = res;
 
-                        H[begin_i*m + begin_j] = res;
+                            begin_i-=1;
+                            begin_j+=1;
+                        }
+                }
+                else
+                {
+                        int begin_i = i-(q)*index-r;
+                        int end_i = i-(q)*(index+1)-r;
+                        int begin_j = j+(q)*index+r;
+                        int end_j = j+(q)*(index+1)+r;
 
-                        begin_i-=1;
-                        begin_j+=1;
-                    }
+                        while (begin_i!= end_i && begin_j!=end_j) 
+                        {
+                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+
+                            H[begin_i*m + begin_j] = res;
+
+                            begin_i-=1;
+                            begin_j+=1;
+
+                        }
+                }
+                working = 0;
             }
-            else
+            else if (initializing_row)
             {
-                    int begin_i = i-(q)*index-r;
-                    int end_i = i-(q)*(index+1)-r;
-                    int begin_j = j+(q)*index+r;
-                    int end_j = j+(q)*(index+1)+r;
+                if (index < r)
+                {
+                        int begin_j = j+(q)*index+index;
+                        int end_j = j+(q)*(index+1)+(index+1);
 
-                    while (begin_i!= end_i && begin_j!=end_j) 
-                    {
-                        int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+                        while (begin_j!=end_j) 
+                        {
+                            H[begin_j] = begin_j*g;
 
-                        H[begin_i*m + begin_j] = res;
-
-                        begin_i-=1;
-                        begin_j+=1;
-
-                    }
+                            begin_j+=1;
+                        }
+                }
+                else
+                {
+                        int begin_j = j+(q)*index+r;
+                        int end_j = j+(q)*(index+1)+r;
+                        
+                        while (begin_j!=end_j) 
+                        {
+                            H[begin_j] = begin_j*g;
+                            begin_j+=1;
+                        }
+                }
+                working = 0;
             }
-            working = 0;
+            else if (initializing_col)
+            {
+                if (index < r)
+                {
+                        int begin_i = i+(q)*index+index;
+                        int end_i = i+(q)*(index+1)+(index+1);
+
+                        while (begin_i!= end_i) 
+                        {
+                            H[begin_i*m] = begin_i*g;
+                            begin_i+=1;
+                        }
+                }
+                else
+                {
+                    int begin_i = i+(q)*index+r;
+                    int end_i = i+(q)*(index+1)+r;
+
+                    while (begin_i!= end_i) 
+                    {
+                        H[begin_i*m] = begin_i*g;
+                        begin_i+=1;
+                    }
+                }
+                working = 0;
+            }
         }
     }
 }
 
 vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_threads)
 {
+
+    bool initializing_row = false;
+    bool initializing_col = false;
+    bool computing = false;
 
     vector<int> working(num_threads);
 
@@ -154,29 +184,145 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
 
     for (int k =0; k < num_threads-1; k++) 
     {
-        threads[k] = thread(worker,std::ref(i),std::ref(j),std::ref(working[k]), std::ref(q), std::ref(r),k, s0, s1, ma, mi, g, std::ref(H), n,m);
+        threads[k] = thread(worker,std::ref(i),std::ref(j),std::ref(working[k]), std::ref(computing), std::ref(initializing_row), std::ref(initializing_col), std::ref(q), std::ref(r),k, s0, s1, ma, mi, g, std::ref(H), n,m);
     }
 
-    H[0] = 0;
+    //initializing
 
-    for (int i2 = 1; i2<n; i2++) {
-        H[i2*m] = i2*g;
+    //initializing row
+
+    std::cout<< "INITIALIZING ROW" << std::endl;
+
+    initializing_row = true;
+
+    int num_elem = m;
+
+    if(num_elem < num_threads)
+    {
+        q = 0;
+        r = num_elem;
+        for (int k = 0; k < r; k++)
+        {
+            working[k] = 1;
+        }
+
     }
 
-    for (int j2 = 1; j2<m; j2++) {
-        H[j2] = j2*g;
+    else
+    {
+            
+        q = num_elem/num_threads;
+        r = num_elem%num_threads;
+
+        for (int k = 0; k < working.size(); k++)
+        {
+            working[k] = 1;
+        }
     }
+
+    if(working[num_threads-1]==1)
+    {
+        int begin_j = j+(q)*(num_threads-1)+r;
+        int end_j = j+num_elem;
+
+        while (begin_j!=end_j) 
+        {
+            H[begin_j] = begin_j*g;
+
+            begin_j+=1;
+        }
+        working[num_threads-1] = 0;
+    }
+
+    bool finished = false;
+
+    while(!finished)
+    {
+        int res = 0;
+
+        for (int k = 0; k< working.size(); k++)
+        {
+            res += working[k];
+        }
+                
+        finished = (res == 0);
+    }
+
+    initializing_row = false;
+
+    //initializing col
+
+    initializing_col = true;
+
+    std::cout<< "INITIALIZING COL" << std::endl;
+
+    num_elem = n;
+
+    if(num_elem < num_threads)
+    {
+        q = 0;
+        r = num_elem;
+        for (int k = 0; k < r; k++)
+        {
+            working[k] = 1;
+        }
+
+    }
+
+    else
+    {
+            
+        q = num_elem/num_threads;
+        r = num_elem%num_threads;
+
+        for (int k = 0; k < working.size(); k++)
+        {
+            working[k] = 1;
+        }
+    }
+
+    if(working[num_threads-1]==1)
+    {
+        int begin_i = i+(q)*(num_threads-1)+r;
+        int end_i = i+num_elem;
+
+        while (begin_i!= end_i) 
+        {
+
+            H[begin_i*m] = begin_i*g;
+
+            begin_i+=1;
+        }
+        working[num_threads-1] = 0;
+    }
+
+    finished = false;
+
+    while(!finished)
+    {
+        int res = 0;
+
+        for (int k = 0; k< working.size(); k++)
+        {
+            res += working[k];
+        }
+                
+        finished = (res == 0);
+    }
+
+    initializing_col = false;
+
+    //computing
+
+    computing = true;
+
+    std::cout<< "COMPUTING" << std::endl;
 
     i = 1;
     j = 1;
 
     while (i != n && j!= m)
     {
-
-        // std::cout << "Point" << std::endl;
-        // std::cout << i << " " << j << std::endl;
-
-        int num_elem;
 
         if (i < n-1)
         {
@@ -186,9 +332,6 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
         {
             num_elem = min(m-1 - (j-1),n-1);
         }
-        
-
-        // std::cout << "num_elem: " << num_elem << std::endl;
 
         if(num_elem < num_threads)
         {
@@ -219,17 +362,9 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
             int end_i = i-num_elem;
             int begin_j = j+(q)*(num_threads-1)+r;
             int end_j = j+num_elem;
-            // std::cout << "beginning loop" << std::endl;
-            // std::cout << "n: " << n << " m: " << m << std::endl;
-            // std::cout << "i: " << i << " j: " << j << std::endl;
-            // std::cout << "begin_i: " << begin_i << " begin_j: " << begin_j << std::endl;
-            // std::cout << "end_i: " << end_i << " end_j " << end_j << std::endl;
 
             while (begin_i!= end_i && begin_j!=end_j) 
             {
-                // std::cout << "begin_i: " << begin_i << " begin_j: " << begin_j << std::endl;
-                // std::cout << "end_i: " << end_i << " end_j " << end_j << std::endl;
-                
 
                 int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
@@ -241,7 +376,7 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
             working[num_threads-1] = 0;
         }
 
-        bool finished = false;
+        finished = false;
 
         while(!finished)
         {
@@ -277,6 +412,8 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
         threads[k].join();
     }
 
+    computing = false;
+
     return H;
 }
 
@@ -292,35 +429,42 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
 
 int main() {
 
-    unsigned int N = 1 <<6;
+    unsigned int N = 1 << 13;
+
+    const char nucleotides[] = {'A', 'T', 'G', 'C'};
 
     // string s0 = "*TAGC";
     string s0 = "*";
     for (int i = 0; i < N; ++i) {
-        s0 += "T";
+        s0 += nucleotides[std::rand() % 4];
     }
 
     // string s1 = "*TAGTC";
     string s1 = "*";
     for (int i = 0; i < N; ++i) {
-        s1 += "T";
+        s1 += nucleotides[std::rand() % 4];
     }
 
+    std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
     auto start = high_resolution_clock::now();
     vector<int> H1 = NW(s0, s1, 1, -1, -2);
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start);
     cout << "Sequential execution time: " << duration.count() << " µs" << endl;
+    std::cout << "Sequential score: " << H1.back() << std::endl;
+
+    std::cout<< " " << std::endl;
+
+    std::cout<< "RUNNING PARALLEL CODE" << std::endl;
 
     start = high_resolution_clock::now();
     vector<int> H2 = NW_Parallel(s0, s1, 1, -1, -2, 5);
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start);
     cout << "Parallel execution time: " << duration.count() << " µs" << endl;
-
-    std::cout << "Sequential score: " << H1.back() << std::endl;
-    // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
     std::cout << "Parallel score: " << H2.back() << std::endl;
+    
+    // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
     // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
 
     return 0;
