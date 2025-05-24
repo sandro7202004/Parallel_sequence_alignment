@@ -9,7 +9,6 @@ using namespace std::chrono;
 
 int p(int i, int j, string s0, string s1, int ma, int mi) 
 {
-    
     if (s0[i] == s1[j]) 
     {
         return ma;
@@ -135,7 +134,7 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
 
     vector<int> working(num_threads);
 
-    for (int k = 0; k < num_threads-1; k++)
+    for (int k = 0; k < num_threads; k++)
     {
         working[k] = 0;
     }
@@ -177,7 +176,17 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
         // std::cout << "Point" << std::endl;
         // std::cout << i << " " << j << std::endl;
 
-        int num_elem = min(i,min(n-1,m-1));
+        int num_elem;
+
+        if (i < n-1)
+        {
+            num_elem = min(i,m-1);
+        }
+        else 
+        {
+            num_elem = min(m-1 - (j-1),n-1);
+        }
+        
 
         // std::cout << "num_elem: " << num_elem << std::endl;
 
@@ -210,9 +219,18 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
             int end_i = i-num_elem;
             int begin_j = j+(q)*(num_threads-1)+r;
             int end_j = j+num_elem;
+            // std::cout << "beginning loop" << std::endl;
+            // std::cout << "n: " << n << " m: " << m << std::endl;
+            // std::cout << "i: " << i << " j: " << j << std::endl;
+            // std::cout << "begin_i: " << begin_i << " begin_j: " << begin_j << std::endl;
+            // std::cout << "end_i: " << end_i << " end_j " << end_j << std::endl;
 
             while (begin_i!= end_i && begin_j!=end_j) 
             {
+                // std::cout << "begin_i: " << begin_i << " begin_j: " << begin_j << std::endl;
+                // std::cout << "end_i: " << end_i << " end_j " << end_j << std::endl;
+                
+
                 int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
                 H[begin_i*m + begin_j] = res;
@@ -274,19 +292,19 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
 
 int main() {
 
-    unsigned int N = 1 << 13;
+    unsigned int N = 1 <<6;
 
-    string s0 = "*TAGC";
-    // string s0 = "*";
-    // for (int i = 0; i < N; ++i) {
-    //     s0 += "T";
-    // }
+    // string s0 = "*TAGC";
+    string s0 = "*";
+    for (int i = 0; i < N; ++i) {
+        s0 += "T";
+    }
 
-    string s1 = "*TAGTC";
-    // string s1 = "*";
-    // for (int i = 0; i < N; ++i) {
-    //     s1 += "T";
-    // }
+    // string s1 = "*TAGTC";
+    string s1 = "*";
+    for (int i = 0; i < N; ++i) {
+        s1 += "T";
+    }
 
     auto start = high_resolution_clock::now();
     vector<int> H1 = NW(s0, s1, 1, -1, -2);
@@ -301,9 +319,9 @@ int main() {
     cout << "Parallel execution time: " << duration.count() << " µs" << endl;
 
     std::cout << "Sequential score: " << H1.back() << std::endl;
-    printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
+    // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
     std::cout << "Parallel score: " << H2.back() << std::endl;
-    printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
+    // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
 
     return 0;
 }
