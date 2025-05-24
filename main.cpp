@@ -429,9 +429,11 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
 
 int main() {
 
-    unsigned int N = 1 << 13;
+    std::srand(std::time(0));
 
-    const char nucleotides[] = {'A', 'T', 'G', 'C'};
+    unsigned int N = 5;
+
+    std::string nucleotides = "ACGT";
 
     // string s0 = "*TAGC";
     string s0 = "*";
@@ -444,6 +446,8 @@ int main() {
     for (int i = 0; i < N; ++i) {
         s1 += nucleotides[std::rand() % 4];
     }
+
+    // std::cout << s0 << " " << s1 << std::endl;
 
     std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
     auto start = high_resolution_clock::now();
