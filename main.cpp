@@ -431,7 +431,7 @@ int main() {
 
     std::srand(std::time(0));
 
-    unsigned int N = 5;
+    unsigned int N = 1 << 12;
 
     std::string nucleotides = "ACGT";
 
