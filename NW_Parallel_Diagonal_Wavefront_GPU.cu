@@ -7,16 +7,6 @@
 using namespace std;
 using namespace std::chrono; 
 
-int p_CPU(int i, int j, string s0, string s1, int ma, int mi) 
-{
-    if (s0[i] == s1[j]) 
-    {
-        return ma;
-    }
-
-    return mi;
-}
-
 vector<int> NW(string s0, string s1, int ma, int mi, int g)
 {
 
@@ -39,7 +29,16 @@ vector<int> NW(string s0, string s1, int ma, int mi, int g)
     {
         for (int j=1; j<m; j++) 
         {
-            int res = max(max(H[(i-1)*m + (j-1)] + p_CPU(i,j,s0,s1,ma,mi), H[(i-1)*m + (j)] + g), H[(i)*m + (j-1)] + g);
+            int p;
+            if (s0[i] == s1[j]) 
+            {
+                p = 1;
+            }
+            else 
+            {
+                p = -1;
+            }
+            int res = max(max(H[(i-1)*m + (j-1)] + p, H[(i-1)*m + (j)] + g), H[(i)*m + (j-1)] + g);
 
             H[i*m + j] = res;
         }
@@ -47,17 +46,6 @@ vector<int> NW(string s0, string s1, int ma, int mi, int g)
 
     return H;
 
-}
-
-__device__
-int p(int i, int j, char* s0, char* s1) 
-{
-    if (s0[i] == s1[j]) 
-    {
-        return 1;
-    }
-
-    return -1;
 }
 
 __global__ 
@@ -131,7 +119,16 @@ void compute(int* H, int i, int j, int q, int r, int m, char* s0, char* s1, int 
 
         while(begin_i!= end_i && begin_j!=end_j) 
         {
-            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+            int p;
+            if (s0[begin_i] == s1[begin_j]) 
+            {
+                p = 1;
+            }
+            else 
+            {
+                p = -1;
+            }
+            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p, H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
             H[begin_i*m + begin_j] = res;
 
@@ -148,7 +145,16 @@ void compute(int* H, int i, int j, int q, int r, int m, char* s0, char* s1, int 
 
         while(begin_i!= end_i && begin_j!=end_j) 
         {
-            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+            int p;
+            if (s0[begin_i] == s1[begin_j]) 
+            {
+                p = 1;
+            }
+            else 
+            {
+                p = -1;
+            }
+            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p, H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
             H[begin_i*m + begin_j] = res;
 
@@ -257,7 +263,7 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
 int main() {
     std::srand(std::time(0));
 
-    unsigned int N = 1 << 14;
+    unsigned int N = 1 << 13;
 
     const char nucleotides[] = {'A', 'T', 'G', 'C'};
 
@@ -273,20 +279,20 @@ int main() {
         s1 += nucleotides[std::rand() % 4];
     }
 
-    // std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
-    // auto start = high_resolution_clock::now();
-    // vector<int> H1 = NW(s0, s1, 1, -1, -2);
-    // auto end = high_resolution_clock::now();
-    // auto duration = duration_cast<microseconds>(end - start);
-    // cout << "Sequential execution time: " << duration.count() << " µs" << endl;
-    // std::cout << "Sequential score: " << H1.back() << std::endl;
+    std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
+    auto start = high_resolution_clock::now();
+    vector<int> H1 = NW(s0, s1, 1, -1, -2);
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(end - start);
+    cout << "Sequential execution time: " << duration.count() << " µs" << endl;
+    std::cout << "Sequential score: " << H1.back() << std::endl;
 
     std::cout << "\nRUNNING GPU PARALLEL CODE" << std::endl;
 
-    auto start = high_resolution_clock::now();
+    start = high_resolution_clock::now();
     std::vector<int> H2 = NW_Parallel_GPU(s0, s1, 1, -1, -2);
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start);
     std::cout << "GPU execution time: " << duration.count() << " µs" << std::endl;
     std::cout << "GPU score: " << H2.back() << std::endl;
 

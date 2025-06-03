@@ -7,16 +7,6 @@
 using namespace std;
 using namespace std::chrono; 
 
-int p(int i, int j, string s0, string s1, int ma, int mi) 
-{
-    if (s0[i] == s1[j]) 
-    {
-        return ma;
-    }
-
-    return mi;
-}
-
 vector<int> NW(string s0, string s1, int ma, int mi, int g)
 {
 
@@ -39,7 +29,16 @@ vector<int> NW(string s0, string s1, int ma, int mi, int g)
     {
         for (int j=1; j<m; j++) 
         {
-            int res = max(max(H[(i-1)*m + (j-1)] + p(i,j,s0,s1,ma,mi), H[(i-1)*m + (j)] + g), H[(i)*m + (j-1)] + g);
+            int p;
+            if (s0[i] == s1[j]) 
+            {
+                p = ma;
+            }
+            else 
+            {
+                p = mi;
+            }
+            int res = max(max(H[(i-1)*m + (j-1)] + p, H[(i-1)*m + (j)] + g), H[(i)*m + (j-1)] + g);
 
             H[i*m + j] = res;
         }
@@ -70,7 +69,17 @@ void worker(int& i,int& j, int& working, bool& computing, bool& initializing_row
 
                         while (begin_i!= end_i && begin_j!=end_j) 
                         {
-                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+                            int p;
+                            if (s0[begin_i] == s1[begin_j]) 
+                            {
+                                p = ma;
+                            }
+                            else 
+                            {
+                                p = mi;
+                            }   
+
+                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p, H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
                             H[begin_i*m + begin_j] = res;
 
@@ -87,7 +96,16 @@ void worker(int& i,int& j, int& working, bool& computing, bool& initializing_row
 
                         while (begin_i!= end_i && begin_j!=end_j) 
                         {
-                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+                            int p;
+                            if (s0[begin_i] == s1[begin_j]) 
+                            {
+                                p = ma;
+                            }
+                            else {
+                                p = mi;
+                            }
+
+                            int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p, H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
                             H[begin_i*m + begin_j] = res;
 
@@ -365,8 +383,17 @@ vector<int> NW_Parallel(string s0, string s1, int ma, int mi, int g, int num_thr
 
             while (begin_i!= end_i && begin_j!=end_j) 
             {
+                int p;
+                if (s0[begin_i] == s1[begin_j]) 
+                {
+                    p = ma;
+                }
+                else 
+                {
+                    p = mi;
+                }
 
-                int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p(begin_i,begin_j,s0,s1,ma,mi), H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
+                int res = max(max(H[(begin_i-1)*m + (begin_j-1)] + p, H[(begin_i-1)*m + (begin_j)] + g), H[(begin_i)*m + (begin_j-1)] + g);
 
                 H[begin_i*m + begin_j] = res;
 
@@ -431,7 +458,7 @@ int main() {
 
     std::srand(std::time(0));
 
-    unsigned int N = 1 << 12;
+    unsigned int N = 1 << 13;
 
     std::string nucleotides = "ACGT";
 
