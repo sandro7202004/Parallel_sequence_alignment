@@ -1,4 +1,5 @@
 #include <iostream>
+#include <atomic>
 #include <utility> 
 #include <vector>
 #include <cstring> 
@@ -53,7 +54,8 @@ vector<int> NW_sequential(string s0, string s1, int ma, int mi, int g)
     return H;
 }
 
-void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, string s1, int ma, int mi, int g, vector<int>& H, int lb, int n, int m)
+void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, string s1, int ma, int mi, int g,
+     vector<int>& H, vector<atomic<int>>& boundary, int n, int m)
 {
     while (true)
     {
@@ -64,34 +66,17 @@ void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, st
             int begin_j;
             int end_j;
 
-            if (mode == 0) // SETTING THE WHOLE MATRIX TO A LOWER BOUND
-            {
-                if (index < r) {
-                    begin_j = 1 + q*index + index;
-                    end_j   = 1 + q*(index + 1) + (index + 1);
-                } else {
-                    begin_j = 1 + q*index + r;
-                    end_j   = 1 + q*(index + 1) + r;
-                }
-                
-                for (int ii = 1; ii < n; ++ii) {
-                    for (int jj = begin_j; jj < end_j; ++jj){
-                        H[ii * m + jj] = lb;
-                    }
-                }
-                working = 0;
-            }
-            else if (mode == 1)  // INITIALIZING FIRST ROW
+            if (mode == 0)  // INITIALIZING FIRST ROW
             {
                 if (index < r)
                 {
-                    begin_j = (q)*index+index;
-                    end_j = (q)*(index+1)+(index+1);
+                    begin_j = q * index + index;
+                    end_j = q *(index+1) + (index+1);
                 }
                 else
                 {
-                    begin_j = (q)*index+r;
-                    end_j = (q)*(index+1)+r;
+                    begin_j = q * index + r;
+                    end_j = q * (index+1) + r;
                 }
 
                 while (begin_j != end_j) 
@@ -101,7 +86,7 @@ void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, st
                 }
                 working = 0;
             }
-            else if (mode == 2) // INITIALIZING FIRST COLUMN
+            else if (mode == 1) // INITIALIZING FIRST COLUMN
             {
                 if (index < r)
                 {
@@ -132,14 +117,21 @@ void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, st
                     begin_j = 1 + q * index + r;
                     end_j   = 1 + q * (index + 1) + r;
                 }
-                
+            
                 for (int ii = 1; ii < n; ++ii)
                 {
                     for (int jj = begin_j; jj < end_j; ++jj) 
                     {   
-                        if (jj == begin_j){while(H[ii * m + (jj - 1)] == lb){}}
-                        NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                        if ((jj == begin_j) && (index != 0)){
+                            while(boundary[index - 1].load() == 0){}
+                            NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                            boundary[index - 1].fetch_sub(1);
+                        }
+                        else{
+                            NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                        }
                     }
+                    boundary[index].fetch_add(1);
                 }
                 working = 0;
                 return;
@@ -151,99 +143,51 @@ void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, st
 vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_threads)
 {
 
-    int mode;
-
-    vector<int> working(num_threads);
-
-    for (int k = 0; k < num_threads; k++){working[k] = 0;}
-
     int n = s0.length();
     int m = s1.length();
 
-    int q = 0;
-    int r = 0;
+    vector<int> H(n * m);
+    vector<int> working(num_threads - 1, 0);
+    std::vector<std::atomic<int>> boundary(num_threads);
+    for (int i = 0; i < num_threads; ++i){boundary[i].store(0, memory_order_relaxed);}
+    vector<thread> threads(num_threads - 1);
 
-    int lb = g * m * n - 1;
-
-    std::vector<thread> threads(num_threads-1);
-
-    vector<int> H(n*m);
+    int mode;
+    bool finished;
+    int num_elem;
+    int q;
+    int r;
+    int working_threads;
 
     for (int k = 0; k < num_threads - 1; k++) 
     {
-        threads[k] = thread(worker_BW, std::ref(working[k]), std::ref(mode), std::ref(q), std::ref(r),
-        k, s0, s1, ma, mi, g, std::ref(H), lb, n, m);
+        threads[k] = thread(worker_BW, ref(working[k]), ref(mode), ref(q), ref(r),
+        k, s0, s1, ma, mi, g, ref(H), ref(boundary), n, m);
     }
 
-    std::cout<< "LOWER BOUNDING" << std::endl;
+    //INITIALIZING ROW
 
     mode = 0;
-    int num_elem = m - 1;
-
-    if (num_elem < num_threads)
-    {
-        q = 0;
-        r = num_elem;
-        for (int k = 0; k < r; k++){working[k] = 1;}
-    }
-    else
-    { 
-        q = num_elem / num_threads;
-        r = num_elem % num_threads;
-        for (int k = 0; k < working.size(); k++){working[k] = 1;}
-    }
-
-    if(working[num_threads-1]==1)
-    {
-        int begin_j = 1+(q)*(num_threads-1)+r;
-        int end_j = 1+num_elem;
-
-        for (int ii = 1; ii < n; ++ii) {
-            for (int jj = begin_j; jj < end_j; ++jj) {
-                H[ii * m + jj] = lb; 
-            }
-        }
-        working[num_threads-1] = 0;
-    }
-
-    bool finished = false;
-
-    while(!finished)
-    {
-        int res = 0;
-        for (int k = 0; k < working.size(); k++){res += working[k];}
-        finished = (res == 0);
-    }
-
-    std::cout<< "INITIALIZING ROW" << std::endl;
-
-    mode = 1;
     num_elem = m;
 
-    if(num_elem < num_threads)
-    {
-        q = 0;
-        r = num_elem;
-        for (int k = 0; k < r; k++){working[k] = 1;}
-    }
-    else
-    { 
-        q = num_elem/num_threads;
-        r = num_elem%num_threads;
-        for (int k = 0; k < working.size(); k++){working[k] = 1;}
-    }
+    q = num_elem/num_threads;
+    r = num_elem%num_threads;
 
-    if(working[num_threads-1]==1)
+    working_threads = num_threads - 1;
+
+    if(num_elem < num_threads){working_threads = r;}
+
+    for (int k = 0; k < working_threads; k++) {working[k] = 1;}
+
     {
-        int begin_j = (q)*(num_threads-1)+r;
+        int begin_j = q * (num_threads-1) + r;
         int end_j = num_elem;
 
         while (begin_j!=end_j) 
         {
-            H[begin_j] = begin_j*g;
+            H[begin_j] = begin_j * g;
             begin_j+=1;
         }
-        working[num_threads-1] = 0;
     }
 
     finished = false;
@@ -251,32 +195,26 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
     while(!finished)
     {
         int res = 0;
-        for (int k = 0; k< working.size(); k++){res += working[k];}
+        for (int k = 0; k < working_threads; k++){res += working[k];}
         finished = (res == 0);
     }
 
-    std::cout<< "INITIALIZING COLUMN" << std::endl;
+    //INITIALIZING COLUMN
 
-    mode = 2;
+    mode = 1;
     num_elem = n;
 
-    if(num_elem < num_threads)
-    {
-        q = 0;
-        r = num_elem;
-        for (int k = 0; k < r; k++){working[k] = 1;}
+    q = num_elem/num_threads;
+    r = num_elem%num_threads;
 
-    }
-    else
-    {
-        q = num_elem/num_threads;
-        r = num_elem%num_threads;
-        for (int k = 0; k < working.size(); k++){working[k] = 1;}
-    }
+    working_threads = num_threads - 1;
 
-    if(working[num_threads-1]==1)
+    if(num_elem < num_threads){working_threads = r;}
+
+    for (int k = 0; k < working_threads; k++){working[k] = 1;}
+
     {
-        int begin_i = (q)*(num_threads-1)+r;
+        int begin_i = q * (num_threads - 1) + r;
         int end_i = num_elem;
 
         while (begin_i!= end_i) 
@@ -284,7 +222,6 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
             H[begin_i*m] = begin_i*g;
             begin_i+=1;
         }
-        working[num_threads-1] = 0;
     }
 
     finished = false;
@@ -292,42 +229,43 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
     while(!finished)
     {
         int res = 0;
-        for (int k = 0; k< working.size(); k++){res += working[k];}    
+        for (int k = 0; k< working_threads; k++){res += working[k];}    
         finished = (res == 0);
     }
 
-    std::cout<< "COMPUTING" << std::endl;
+    //COMPUTING
 
-    mode = 3;
+    mode = 2;
     num_elem = m - 1;
 
-    if (num_elem < num_threads)
-    {
-        q = 0;
-        r = num_elem;
-        for (int k = 0; k < r; k++){working[k] = 1;}   
-    }
-    else
-    {  
-        q = num_elem/num_threads;
-        r = num_elem%num_threads;
-        for (int k = 0; k < working.size(); k++){working[k] = 1;}
-    }
+    q = num_elem/num_threads;
+    r = num_elem%num_threads;
 
-    if(working[num_threads-1]==1)
+    working_threads = num_threads - 1;
+
+    if(num_elem < num_threads){working_threads = r;}
+
+    for (int k = 0; k < working_threads; k++) {working[k] = 1;}
+
     {
-        int begin_j = 1+(q)*(num_threads-1)+r;
-        int end_j = 1+num_elem;
+        int begin_j = 1 + q * (num_threads - 1) + r;
+        int end_j = 1 + num_elem;
 
         for (int ii = 1; ii < n; ++ii)
         {
             for (int jj = begin_j; jj < end_j; ++jj) 
             {   
-                if (jj == begin_j){while(H[ii * m + (jj - 1)] == lb){}}
-                NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                if (jj == begin_j){
+                    while(boundary[num_threads - 2].load() == 0){}
+                    NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                    boundary[num_threads - 2].fetch_sub(1);
+                }
+                else{
+                    NW_step(H,ii,jj,s0,s1,ma,mi,g);
+                }
             }
+            boundary[num_threads - 1].fetch_add(1);           
         }
-        working[num_threads-1] = 0;
     }
 
     finished = false;
@@ -335,11 +273,11 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
     while(!finished)
     {
         int res = 0;
-        for (int k = 0; k < working.size(); k++){res += working[k];}    
+        for (int k = 0; k < working_threads; k++){res += working[k];}    
         finished = (res == 0);
     }
 
-    for (int k=0; k<num_threads-1;k++){threads[k].join();}
+    for (int k=0; k < num_threads - 1;k++){threads[k].join();}
 
     return H;
 }
@@ -348,7 +286,7 @@ int main() {
 
     std::srand(std::time(0));
 
-    unsigned int N = 1<<12;
+    unsigned int N = 1<<11;
 
     std::cout<< N << std::endl;
 
@@ -359,8 +297,6 @@ int main() {
 
     string s1 = "*";
     for (int i = 0; i < N; ++i) {s1 += nucleotides[std::rand() % 4];}
-
-    // std::cout << s0 << " " << s1 << std::endl;
 
     std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
 
