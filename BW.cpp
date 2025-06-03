@@ -18,125 +18,127 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
     }
 }
 
-int p(int i, int j, string s0, string s1, int ma, int mi) 
+vector<int> NW(string s0, string s1, int ma, int mi, int g)
 {
-    if (s0[i] == s1[j]){return ma;}
-    return mi;
-}
 
-void NW_step(vector<int>& H, int i, int j, string s0, string s1, int ma, int mi, int g)
-{
     int n = strlen(s0.c_str());
     int m = strlen(s1.c_str());
-
-    int up = H[i * m + (j-1)] + g;
-    int left = H[(i-1) * m + (j)] + g;
-    int diag = H[(i-1) * m + (j-1)] + p(i,j,s0,s1,ma,mi);
-
-    H[i * m + j] = max(max(diag, up), left);
-
-    return;
-}
-
-vector<int> NW_sequential(string s0, string s1, int ma, int mi, int g)
-{
-    int n = strlen(s0.c_str());
-    int m = strlen(s1.c_str());
+    int p;
 
     vector<int> H(n*m);
-
+    
     H[0] = 0;
 
-    for (int i = 1; i < n; i++){H[i * m] = i * g;}
-    for (int j = 1; j < m; j++){H[j] = j * g;}
-    for (int i = 1; i < n; i++){for (int j=1; j<m; j++){NW_step(H,i,j,s0,s1,ma,mi,g);}}
+    for (int i = 1; i<n; i++) {
+        H[i*m] = i*g;
+    }
+
+    for (int j = 1; j<m; j++) {
+        H[j] = j*g;
+    }
+
+    for (int i=1; i <n; i++)
+    {
+        for (int j=1; j<m; j++) 
+        {
+            if (s0[i] == s1[j]){p = ma;}
+            else {p = mi;}
+
+            H[i * m + j] = max(max(H[(i-1) *  m + (j-1)] + p, H[(i-1) * m + j] + g), H[i * m + (j-1)] + g);;
+        }
+    }
 
     return H;
+
 }
 
-void worker_BW(int& working, int& mode, int& q, int& r, int index, string s0, string s1, int ma, int mi, int g,
-     vector<int>& H, vector<atomic<int>>& boundary, int n, int m)
-{
-    while (true)
+void worker_BW_init_row(int& block, int& rest, int index, string s0, string s1, int ma, int mi, int g,
+    vector<int>& H, vector<int>& boundary_left,vector<int>& boundary_right, int n, int m){
+    
+    int begin_j;
+    int end_j;
+        
+    if (index < rest){
+        begin_j = block * index + index;
+        end_j = block * (index + 1) + (index + 1);
+    }
+    else{
+        begin_j = block * index + rest;
+        end_j = block * (index + 1) + rest;
+    }
+    
+    while (begin_j != end_j) 
     {
-        if (working == 1)
+        H[begin_j] = begin_j * g;
+        begin_j += 1;
+    }
+}
+
+void worker_BW_init_col(int& block, int& rest, int index, string s0, string s1, int ma, int mi, int g,
+    vector<int>& H, vector<int>& boundary_left,vector<int>& boundary_right, int n, int m){
+
+    int begin_i;
+    int end_i;
+
+    if (index < rest)
+    {
+        begin_i = block * index + index;
+        end_i = block * (index + 1) + (index + 1);
+    }
+    else
+    {
+        begin_i = block * index + rest;
+        end_i = block * (index + 1) + rest;
+    }
+    while (begin_i!= end_i) 
+    {
+        H[begin_i * m] = begin_i * g;
+        begin_i += 1;
+    }
+}
+
+void worker_BW_compute(int& block, int& rest, int index, string s0, string s1, int ma, int mi, int g,
+    vector<int>& H, vector<int>& boundary_left,vector<int>& boundary_right, int n, int m){
+
+    int begin_j;
+    int end_j;
+    int p;
+
+    if (index < rest) 
+    {
+        begin_j = 1 + block * index + index;
+        end_j   = 1 + block * (index + 1) + (index + 1);
+    } 
+    else 
+    {
+        begin_j = 1 + block * index + rest;
+        end_j   = 1 + block * (index + 1) + rest;
+    }
+
+    for (int i = 1; i < n; ++i)
+    {
+        for (int j = begin_j; j < end_j; ++j) 
         {   
-            int begin_i;
-            int end_i;
-            int begin_j;
-            int end_j;
+            if ((j == begin_j) && (index != 0)){
 
-            if (mode == 0)  // INITIALIZING FIRST ROW
-            {
-                if (index < r)
-                {
-                    begin_j = q * index + index;
-                    end_j = q *(index+1) + (index+1);
-                }
-                else
-                {
-                    begin_j = q * index + r;
-                    end_j = q * (index+1) + r;
-                }
+                while(boundary_left[index - 1] == boundary_right[index - 1]){}
 
-                while (begin_j != end_j) 
-                {
-                    H[begin_j] = begin_j * g;
-                    begin_j+=1;
-                }
-                working = 0;
+                if (s0[i] == s1[j]){p = ma;}
+                else {p = mi;}
+
+                H[i * m + j] = max(max(H[i * m + (j - 1)] + g, H[(i - 1) * m + (j - 1)] + p), H[(i - 1) * m + j] + g);
+
+                boundary_right[index - 1] += 1;
             }
-            else if (mode == 1) // INITIALIZING FIRST COLUMN
-            {
-                if (index < r)
-                {
-                    begin_i = (q)*index+index;
-                    end_i = (q)*(index+1)+(index+1);
-                }
-                else
-                {
-                    begin_i = (q)*index+r;
-                    end_i = (q)*(index+1)+r;
-                }
-                while (begin_i!= end_i) 
-                {
-                    H[begin_i*m] = begin_i*g;
-                    begin_i+=1;
-                }
-                working = 0;
-            }
-            else // COMPUTE THE COEFFICIENTS 
-            {   
-                if (index < r) 
-                {
-                    begin_j = 1 + q * index + index;
-                    end_j   = 1 + q * (index + 1) + (index + 1);
-                } 
-                else 
-                {
-                    begin_j = 1 + q * index + r;
-                    end_j   = 1 + q * (index + 1) + r;
-                }
-            
-                for (int ii = 1; ii < n; ++ii)
-                {
-                    for (int jj = begin_j; jj < end_j; ++jj) 
-                    {   
-                        if ((jj == begin_j) && (index != 0)){
-                            while(boundary[index - 1].load() == 0){}
-                            NW_step(H,ii,jj,s0,s1,ma,mi,g);
-                            boundary[index - 1].fetch_sub(1);
-                        }
-                        else{
-                            NW_step(H,ii,jj,s0,s1,ma,mi,g);
-                        }
-                    }
-                    boundary[index].fetch_add(1);
-                }
-                working = 0;
-                return;
+            else{
+
+                if (s0[i] == s1[j]){p = ma;}
+                else {p = mi;}
+
+                H[i * m + j] = max(max(H[i * m + (j - 1)] + g, H[(i - 1) * m + (j - 1)] + p), H[(i - 1) * m + j] + g);
             }
         }
+        boundary_left[index] += 1;
     }
 }
 
@@ -147,170 +149,167 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
     int m = s1.length();
 
     vector<int> H(n * m);
-    vector<int> working(num_threads - 1, 0);
-    std::vector<std::atomic<int>> boundary(num_threads);
-    for (int i = 0; i < num_threads; ++i){boundary[i].store(0, memory_order_relaxed);}
+    vector<int> boundary_left(num_threads - 1, 0);
+    vector<int> boundary_right(num_threads - 1, 0);
     vector<thread> threads(num_threads - 1);
 
-    int mode;
     bool finished;
     int num_elem;
-    int q;
-    int r;
+    int block;
+    int rest;
     int working_threads;
-
-    for (int k = 0; k < num_threads - 1; k++) 
-    {
-        threads[k] = thread(worker_BW, ref(working[k]), ref(mode), ref(q), ref(r),
-        k, s0, s1, ma, mi, g, ref(H), ref(boundary), n, m);
-    }
 
     //INITIALIZING ROW
 
-    mode = 0;
     num_elem = m;
 
-    q = num_elem/num_threads;
-    r = num_elem%num_threads;
+    block = num_elem / num_threads;
+    rest = num_elem % num_threads;
 
     working_threads = num_threads - 1;
 
-    if(num_elem < num_threads){working_threads = r;}
+    if(num_elem < num_threads){working_threads = rest;}
 
-    for (int k = 0; k < working_threads; k++) {working[k] = 1;}
-
+    for (int k = 0; k < working_threads; k++) 
     {
-        int begin_j = q * (num_threads-1) + r;
+        threads[k] = thread(worker_BW_init_row, ref(block), ref(rest),
+        k, s0, s1, ma, mi, g, ref(H), ref(boundary_left), ref(boundary_right), n, m);
+    }
+
+    if (num_threads < num_elem)
+    {
+        int begin_j = block * (num_threads - 1) + rest;
         int end_j = num_elem;
 
         while (begin_j!=end_j) 
         {
             H[begin_j] = begin_j * g;
-            begin_j+=1;
+            begin_j += 1;
         }
-    }
-
-    finished = false;
-
-    while(!finished)
-    {
-        int res = 0;
-        for (int k = 0; k < working_threads; k++){res += working[k];}
-        finished = (res == 0);
-    }
-
-    //INITIALIZING COLUMN
-
-    mode = 1;
-    num_elem = n;
-
-    q = num_elem/num_threads;
-    r = num_elem%num_threads;
-
-    working_threads = num_threads - 1;
-
-    if(num_elem < num_threads){working_threads = r;}
-
-    for (int k = 0; k < working_threads; k++){working[k] = 1;}
-
-    {
-        int begin_i = q * (num_threads - 1) + r;
-        int end_i = num_elem;
-
-        while (begin_i!= end_i) 
-        {
-            H[begin_i*m] = begin_i*g;
-            begin_i+=1;
-        }
-    }
-
-    finished = false;
-
-    while(!finished)
-    {
-        int res = 0;
-        for (int k = 0; k< working_threads; k++){res += working[k];}    
-        finished = (res == 0);
-    }
-
-    //COMPUTING
-
-    mode = 2;
-    num_elem = m - 1;
-
-    q = num_elem/num_threads;
-    r = num_elem%num_threads;
-
-    working_threads = num_threads - 1;
-
-    if(num_elem < num_threads){working_threads = r;}
-
-    for (int k = 0; k < working_threads; k++) {working[k] = 1;}
-
-    {
-        int begin_j = 1 + q * (num_threads - 1) + r;
-        int end_j = 1 + num_elem;
-
-        for (int ii = 1; ii < n; ++ii)
-        {
-            for (int jj = begin_j; jj < end_j; ++jj) 
-            {   
-                if (jj == begin_j){
-                    while(boundary[num_threads - 2].load() == 0){}
-                    NW_step(H,ii,jj,s0,s1,ma,mi,g);
-                    boundary[num_threads - 2].fetch_sub(1);
-                }
-                else{
-                    NW_step(H,ii,jj,s0,s1,ma,mi,g);
-                }
-            }
-            boundary[num_threads - 1].fetch_add(1);           
-        }
-    }
-
-    finished = false;
-
-    while(!finished)
-    {
-        int res = 0;
-        for (int k = 0; k < working_threads; k++){res += working[k];}    
-        finished = (res == 0);
     }
 
     for (int k=0; k < num_threads - 1;k++){threads[k].join();}
 
+    //INITIALIZING COLUMN
+
+    num_elem = n;
+
+    block = num_elem / num_threads;
+    rest = num_elem % num_threads;
+
+    working_threads = num_threads - 1;
+
+    if(num_elem < num_threads){working_threads = rest;}
+
+    for (int k = 0; k < working_threads; k++) 
+    {
+        threads[k] = thread(worker_BW_init_col, ref(block), ref(rest),
+        k, s0, s1, ma, mi, g, ref(H), ref(boundary_left), ref(boundary_right), n, m);
+    }
+
+    if (num_threads < num_elem)
+    {
+        int begin_i = block * (num_threads - 1) + rest;
+        int end_i = num_elem;
+
+        while (begin_i!= end_i) 
+        {
+            H[begin_i * m] = begin_i * g;
+            begin_i += 1;
+        }
+    }
+
+    for (int k=0; k < num_threads - 1;k++){threads[k].join();}
+
+    //COMPUTING
+
+    num_elem = m - 1;
+
+    block = num_elem / num_threads;
+    rest = num_elem % num_threads;
+
+    working_threads = num_threads - 1;
+
+    if(num_elem < num_threads){working_threads = rest;}
+
+    for (int k = 0; k < working_threads; k++) 
+    {
+        threads[k] = thread(worker_BW_compute, ref(block), ref(rest),
+        k, s0, s1, ma, mi, g, ref(H), ref(boundary_left), ref(boundary_right), n, m);
+    }
+
+    if (num_threads < num_elem)
+    {
+        int begin_j = 1 + block * (num_threads - 1) + rest;
+        int end_j = 1 + num_elem;
+        int p;
+
+        for (int i = 1; i < n; ++i)
+        {
+            for (int j = begin_j; j < end_j; ++j) 
+            {   
+                if (j == begin_j){
+
+                    while(boundary_left[num_threads - 2] == boundary_right[num_threads - 2]){}
+
+                    if (s0[i] == s1[j]){p = ma;}
+                    else {p = mi;}
+
+                    H[i * m + j] = max(max(H[i * m + (j - 1)] + g, H[(i - 1) * m + (j - 1)] + p), H[(i - 1) * m + j] + g);
+
+                    boundary_right[num_threads - 2] += 1;
+                }
+                else{
+
+                    if (s0[i] == s1[j]){p = ma;}
+                    else {p = mi;}
+
+                    H[i * m + j] = max(max(H[i * m + (j - 1)] + g, H[(i - 1) * m + (j - 1)] + p), H[(i - 1) * m + j] + g);
+                }         
+            }
+        }
+    }
+
+    for (int k=0; k < num_threads - 1 ; k++){threads[k].join();}
+
     return H;
 }
 
-int main() {
+int main(){
 
     std::srand(std::time(0));
 
-    unsigned int N = 1<<11;
-
-    std::cout<< N << std::endl;
+    unsigned int N = 1 << 14;
 
     std::string nucleotides = "ACGT";
 
+    // string s0 = "*TAGC";
     string s0 = "*";
-    for (int i = 0; i < N; ++i) {s0 += nucleotides[std::rand() % 4];}
+    for (int i = 0; i < N; ++i) {
+        s0 += nucleotides[std::rand() % 4];
+    }
 
+    // string s1 = "*TAGTC";
     string s1 = "*";
-    for (int i = 0; i < N; ++i) {s1 += nucleotides[std::rand() % 4];}
+    for (int i = 0; i < N; ++i) {
+        s1 += nucleotides[std::rand() % 4];
+    }
 
-    std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
+    // std::cout << s0 << " " << s1 << std::endl;
+
+    cout << "RUNNING SEQUENTIAL CODE" << endl;
 
     auto start = high_resolution_clock::now();
-    vector<int> H1 =  NW_sequential(s0, s1, 1, -1, -2);
+    vector<int> H1 = NW(s0, s1, 1, -1, -2);
     auto end = high_resolution_clock::now();
 
     auto duration = duration_cast<microseconds>(end - start);
     cout << "Sequential execution time: " << duration.count() << " µs" << endl;
-    std::cout << "Sequential score: " << H1.back() << std::endl;
+    cout << "Sequential score: " << H1.back() << endl;
 
-    std::cout<< " " << std::endl;
+    cout<< " " << endl;
 
-    std::cout<< "RUNNING PARALLEL CODE" << std::endl;
+    cout<< "RUNNING PARALLEL CODE" << endl;
 
     start = high_resolution_clock::now();
     vector<int> H2 = NW_Parallel_BW(s0, s1, 1, -1, -2, 5);
@@ -318,6 +317,10 @@ int main() {
 
     duration = duration_cast<microseconds>(end - start);
     cout << "Parallel execution time: " << duration.count() << " µs" << endl;
-    std::cout << "Parallel score: " << H2.back() << std::endl;
+    cout << "Parallel score: " << H2.back() << endl;
+    
+    // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
+    // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
+
     return 0;
 }
