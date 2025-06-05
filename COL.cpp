@@ -39,28 +39,45 @@ void NW_step(vector<int>& H, int i, int j, string s0, string s1, int ma, int mi,
     return;
 }
 
-vector<int> NW_sequential(string s0, string s1, int ma, int mi, int g)
+vector<int> NW(string s0, string s1, int ma, int mi, int g)
 {
+
     int n = strlen(s0.c_str());
     int m = strlen(s1.c_str());
+    int p;
 
     vector<int> H(n*m);
 
     H[0] = 0;
 
-    for (int i = 1; i < n; i++) {
-        H[i * m] = i * g;
+    for (int i = 1; i<n; i++) {
+        H[i*m] = i*g;
     }
-    for (int j = 1; j < m; j++) {
-        H[j] = j * g;
+
+    for (int j = 1; j<m; j++) {
+        H[j] = j*g;
     }
-    for (int i = 1; i < n; i++) {
-        for (int j=1; j<m; j++) { 
-            NW_step(H,i,j,s0,s1,ma,mi,g);
+
+    for (int i=1; i <n; i++)
+    {
+        for (int j=1; j<m; j++) 
+        {
+            if (s0[i] == s1[j]) 
+            {
+                p = 1;
+            }
+            else 
+            {
+                p = -1;
+            }
+            int res = max(max(H[(i-1)*m + (j-1)] + p, H[(i-1)*m + (j)] + g), H[(i)*m + (j-1)] + g);
+
+            H[i*m + j] = res;
         }
     }
 
     return H;
+
 }
 
 
@@ -236,7 +253,7 @@ vector<int> NW_column_parallel(string s0, string s1, int ma, int mi, int g, int 
 int main() {
     std::srand(std::time(0));
 
-    unsigned int N = 1 << 12;
+    unsigned int N = 1 << 14;
     std::cout << "N = " << N << "\n";
 
     std::string nucleotides = "ACGT";
@@ -257,7 +274,7 @@ int main() {
 
     std::cout << "RUNNING SEQUENTIAL CODE\n";
     auto start = high_resolution_clock::now();
-    vector<int> H1 = NW_sequential(s0, s1, 1, -1, -2);
+    vector<int> H1 = NW(s0, s1, 1, -1, -2);
     auto end = high_resolution_clock::now();
 
     auto duration = duration_cast<microseconds>(end - start);
