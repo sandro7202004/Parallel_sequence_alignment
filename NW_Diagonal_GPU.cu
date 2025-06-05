@@ -267,56 +267,115 @@ void printMatrix(const std::vector<int>& data, int n, int m) {
     }
 }
 
+// int main() {
+//     std::srand(std::time(0));
+
+//     unsigned int N = 1 << 13;
+
+//     const char nucleotides[] = {'A', 'T', 'G', 'C'};
+
+//     // string s0 = "*TAGC";
+//     string s0 = "*";
+//     for (int i = 0; i < N; ++i) {
+//         s0 += nucleotides[std::rand() % 4];
+//     }
+
+//     // string s1 = "*TAGTC";
+//     string s1 = "*";
+//     for (int i = 0; i < N; ++i) {
+//         s1 += nucleotides[std::rand() % 4];
+//     }
+
+//     std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
+//     auto start = high_resolution_clock::now();
+//     vector<int> H1 = NW(s0, s1, 1, -1, -2);
+//     auto end = high_resolution_clock::now();
+//     auto duration = duration_cast<microseconds>(end - start);
+//     cout << "Sequential execution time: " << duration.count() << " µs" << endl;
+//     std::cout << "Sequential score: " << H1.back() << std::endl;
+
+//     std::cout << "\nRUNNING GPU PARALLEL CODE" << std::endl;
+
+//     start = high_resolution_clock::now();
+//     std::vector<int> H2 = NW_Parallel_GPU(s0, s1, 1, -1, -2);
+//     end = high_resolution_clock::now();
+//     duration = duration_cast<microseconds>(end - start);
+//     std::cout << "GPU execution time: " << duration.count() << " µs" << std::endl;
+//     std::cout << "GPU score: " << H2.back() << std::endl;
+
+//     // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
+//     // printf("\n");
+//     // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
+
+//     int n = s0.length();
+//     int m = s1.length();
+
+//     if (check_matrix(H1,H2,n,m))
+//     {
+//         std::cout << "\nSame Matrices" << std::endl;
+//     }
+//     else 
+//     {
+//         std::cout << "\nDifferent Matrices" << std::endl;
+//     }
+
+//     return 0;
+// }
+
 int main() {
+    using namespace std;
+    using namespace std::chrono;
+
     std::srand(std::time(0));
+    std::string nucleotides = "ACGT";
 
-    unsigned int N = 1 << 13;
+    const int min_power = 7;
+    const int max_power = 15;
+    const int num_cases = max_power - min_power + 1;
 
-    const char nucleotides[] = {'A', 'T', 'G', 'C'};
+    vector<long long> sequential_times(num_cases);
+    vector<long long> parallel_times(num_cases);
 
-    // string s0 = "*TAGC";
-    string s0 = "*";
-    for (int i = 0; i < N; ++i) {
-        s0 += nucleotides[std::rand() % 4];
+    for (int p = min_power; p <= max_power; ++p) {
+        unsigned int N = 1 << p;
+        cout << "\nN = " << N << endl;
+
+        // Generate random sequences s0 and s1
+        string s0 = "*";
+        string s1 = "*";
+        for (unsigned int i = 0; i < N; ++i) {
+            s0 += nucleotides[std::rand() % 4];
+            s1 += nucleotides[std::rand() % 4];
+        }
+
+        cout << "RUNNING SEQUENTIAL CODE" << endl;
+        auto start = high_resolution_clock::now();
+        vector<int> H1 = NW(s0, s1, 1, -1, -2);
+        auto end = high_resolution_clock::now();
+        sequential_times[p - min_power] = duration_cast<microseconds>(end - start).count();
+        cout << "Sequential time: " << sequential_times[p - min_power] << " µs" << endl;
+
+        cout << "RUNNING PARALLEL CODE" << endl;
+        start = high_resolution_clock::now();
+        vector<int> H2 = NW_Parallel_GPU(s0, s1, 1, -1, -2);
+        end = high_resolution_clock::now();
+        parallel_times[p - min_power] = duration_cast<microseconds>(end - start).count();
+        cout << "Parallel time: " << parallel_times[p - min_power] << " µs" << endl;
+
+        int n = s0.length();
+        int m = s1.length();
+        if (check_matrix(H1, H2, n, m)) {
+            cout << "Same Matrices" << endl;
+        } else {
+            cout << "Different Matrices" << endl;
+        }
     }
 
-    // string s1 = "*TAGTC";
-    string s1 = "*";
-    for (int i = 0; i < N; ++i) {
-        s1 += nucleotides[std::rand() % 4];
-    }
-
-    std::cout << "RUNNING SEQUENTIAL CODE" << std::endl;
-    auto start = high_resolution_clock::now();
-    vector<int> H1 = NW(s0, s1, 1, -1, -2);
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-    cout << "Sequential execution time: " << duration.count() << " µs" << endl;
-    std::cout << "Sequential score: " << H1.back() << std::endl;
-
-    std::cout << "\nRUNNING GPU PARALLEL CODE" << std::endl;
-
-    start = high_resolution_clock::now();
-    std::vector<int> H2 = NW_Parallel_GPU(s0, s1, 1, -1, -2);
-    end = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(end - start);
-    std::cout << "GPU execution time: " << duration.count() << " µs" << std::endl;
-    std::cout << "GPU score: " << H2.back() << std::endl;
-
-    // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
-    // printf("\n");
-    // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
-
-    int n = s0.length();
-    int m = s1.length();
-
-    if (check_matrix(H1,H2,n,m))
-    {
-        std::cout << "\nSame Matrices" << std::endl;
-    }
-    else 
-    {
-        std::cout << "\nDifferent Matrices" << std::endl;
+    cout << "\n=== Summary of Execution Times ===\n";
+    cout << "N\tSequential (µs)\tParallel (µs)\n";
+    for (int i = 0; i < num_cases; ++i) {
+        unsigned int N = 1 << (i + min_power);
+        cout << N << "\t" << sequential_times[i] << "\t\t" << parallel_times[i] << endl;
     }
 
     return 0;
