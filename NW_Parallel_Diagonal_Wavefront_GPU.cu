@@ -7,6 +7,21 @@
 using namespace std;
 using namespace std::chrono; 
 
+bool check_matrix(vector<int> H1, vector<int> H2, int n, int m)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for(int j = 0; j < m; j++)
+        {
+            if (H1[i*m + j] != H2[i*m+j])
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 vector<int> NW(string s0, string s1, int ma, int mi, int g)
 {
 
@@ -109,6 +124,7 @@ void initCOL(int* H, int q, int r, int m, int g)
 __global__ 
 void compute(int* H, int i, int j, int q, int r, int m, char* s0, char* s1, int g) 
 {
+    int p;
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < r)
     {
@@ -119,7 +135,6 @@ void compute(int* H, int i, int j, int q, int r, int m, char* s0, char* s1, int 
 
         while(begin_i!= end_i && begin_j!=end_j) 
         {
-            int p;
             if (s0[begin_i] == s1[begin_j]) 
             {
                 p = 1;
@@ -145,7 +160,6 @@ void compute(int* H, int i, int j, int q, int r, int m, char* s0, char* s1, int 
 
         while(begin_i!= end_i && begin_j!=end_j) 
         {
-            int p;
             if (s0[begin_i] == s1[begin_j]) 
             {
                 p = 1;
@@ -200,19 +214,12 @@ vector<int> NW_Parallel_GPU(string s0, string s1, int ma, int mi, int g)
 
     int i = 1;
     int j = 1;
+    int num_elem;
 
     while(i!= n && j!= m)
     {   
-        int num_elem;
 
-        if (i < n-1)
-        {
-            num_elem = min(i,m-1);
-        }
-        else 
-        {
-            num_elem = min(m-1 - (j-1),n-1);
-        }
+        num_elem = min(i,m-j);
 
         q = num_elem/num_threads;
         r = num_elem%num_threads;
@@ -299,6 +306,18 @@ int main() {
     // printMatrix(H1,strlen(s0.c_str()),strlen(s1.c_str()));
     // printf("\n");
     // printMatrix(H2,strlen(s0.c_str()),strlen(s1.c_str()));
+
+    int n = s0.length();
+    int m = s1.length();
+
+    if (check_matrix(H1,H2,n,m))
+    {
+        std::cout << "\nSame Matrices" << std::endl;
+    }
+    else 
+    {
+        std::cout << "\nDifferent Matrices" << std::endl;
+    }
 
     return 0;
 }
