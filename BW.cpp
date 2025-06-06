@@ -159,6 +159,7 @@ void worker_BW_compute(int& block, int& rest, int index, string s0, string s1, i
 
 vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_threads)
 {
+    if (num_threads == 1){return NW(s0,s1,ma,mi,g);}
 
     int n = s0.length();
     int m = s1.length();
