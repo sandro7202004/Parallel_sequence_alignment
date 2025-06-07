@@ -14,7 +14,7 @@ This will produce four binaries:
 
 * `DW` (Diagonal Wavefront CPU)
 * `BW` (Block-Based Column Wavefront CPU)
-* `COL`
+* `COL` (Sequential)
 * `DW_CUDA` (Diagonal Wavefront GPU)
 
 ## Usage
