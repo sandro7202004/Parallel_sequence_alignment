@@ -340,6 +340,65 @@ vector<int> NW_Parallel_BW(string s0, string s1, int ma, int mi, int g, int num_
 
 //     return 0;
 // }
+// int main() {
+//     using namespace std;
+//     using namespace std::chrono;
+
+//     std::srand(std::time(0));
+//     std::string nucleotides = "ACGT";
+
+//     const int min_power = 7;
+//     const int max_power = 15;
+//     const int num_cases = max_power - min_power + 1;
+
+//     vector<long long> sequential_times(num_cases);
+//     vector<long long> parallel_times(num_cases);
+
+//     for (int p = min_power; p <= max_power; ++p) {
+//         unsigned int N = 1 << p;
+//         cout << "\nN = " << N << endl;
+
+//         // Generate random sequences s0 and s1
+//         string s0 = "*";
+//         string s1 = "*";
+//         for (unsigned int i = 0; i < N; ++i) {
+//             s0 += nucleotides[std::rand() % 4];
+//             s1 += nucleotides[std::rand() % 4];
+//         }
+
+//         cout << "RUNNING SEQUENTIAL CODE" << endl;
+//         auto start = high_resolution_clock::now();
+//         vector<int> H1 = NW(s0, s1, 1, -1, -2);
+//         auto end = high_resolution_clock::now();
+//         sequential_times[p - min_power] = duration_cast<microseconds>(end - start).count();
+//         cout << "Sequential time: " << sequential_times[p - min_power] << " µs" << endl;
+
+//         cout << "RUNNING PARALLEL CODE" << endl;
+//         start = high_resolution_clock::now();
+//         vector<int> H2 = NW_Parallel_BW(s0, s1, 1, -1, -2, 5); // 5 threads
+//         end = high_resolution_clock::now();
+//         parallel_times[p - min_power] = duration_cast<microseconds>(end - start).count();
+//         cout << "Parallel time: " << parallel_times[p - min_power] << " µs" << endl;
+
+//         int n = s0.length();
+//         int m = s1.length();
+//         if (check_matrix(H1, H2, n, m)) {
+//             cout << "Same Matrices" << endl;
+//         } else {
+//             cout << "Different Matrices" << endl;
+//         }
+//     }
+
+//     cout << "\n=== Summary of Execution Times ===\n";
+//     cout << "N\tSequential (µs)\tParallel (µs)\n";
+//     for (int i = 0; i < num_cases; ++i) {
+//         unsigned int N = 1 << (i + min_power);
+//         cout << N << "\t" << sequential_times[i] << "\t\t" << parallel_times[i] << endl;
+//     }
+
+//     return 0;
+// }
+
 int main() {
     using namespace std;
     using namespace std::chrono;
@@ -347,53 +406,47 @@ int main() {
     std::srand(std::time(0));
     std::string nucleotides = "ACGT";
 
-    const int min_power = 7;
-    const int max_power = 15;
-    const int num_cases = max_power - min_power + 1;
+    const unsigned int N = 1 << 12; // Fixed size: 4096
+    const int max_threads = 8;
 
-    vector<long long> sequential_times(num_cases);
-    vector<long long> parallel_times(num_cases);
+    vector<long long> parallel_times(max_threads);
 
-    for (int p = min_power; p <= max_power; ++p) {
-        unsigned int N = 1 << p;
-        cout << "\nN = " << N << endl;
+    // Generate random sequences s0 and s1
+    string s0 = "*";
+    string s1 = "*";
+    for (unsigned int i = 0; i < N; ++i) {
+        s0 += nucleotides[std::rand() % 4];
+        s1 += nucleotides[std::rand() % 4];
+    }
 
-        // Generate random sequences s0 and s1
-        string s0 = "*";
-        string s1 = "*";
-        for (unsigned int i = 0; i < N; ++i) {
-            s0 += nucleotides[std::rand() % 4];
-            s1 += nucleotides[std::rand() % 4];
-        }
+    cout << "RUNNING SEQUENTIAL CODE\n";
+    auto start = high_resolution_clock::now();
+    vector<int> H_seq = NW(s0, s1, 1, -1, -2);
+    auto end = high_resolution_clock::now();
+    long long sequential_time = duration_cast<microseconds>(end - start).count();
+    cout << "Sequential time: " << sequential_time << " µs\n";
 
-        cout << "RUNNING SEQUENTIAL CODE" << endl;
-        auto start = high_resolution_clock::now();
-        vector<int> H1 = NW(s0, s1, 1, -1, -2);
-        auto end = high_resolution_clock::now();
-        sequential_times[p - min_power] = duration_cast<microseconds>(end - start).count();
-        cout << "Sequential time: " << sequential_times[p - min_power] << " µs" << endl;
-
-        cout << "RUNNING PARALLEL CODE" << endl;
+    for (int threads = 1; threads <= max_threads; ++threads) {
+        cout << "RUNNING PARALLEL CODE with " << threads << " thread(s)\n";
         start = high_resolution_clock::now();
-        vector<int> H2 = NW_Parallel_BW(s0, s1, 1, -1, -2, 5); // 5 threads
+        vector<int> H_par = NW_Parallel_BW(s0, s1, 1, -1, -2, threads);
         end = high_resolution_clock::now();
-        parallel_times[p - min_power] = duration_cast<microseconds>(end - start).count();
-        cout << "Parallel time: " << parallel_times[p - min_power] << " µs" << endl;
+        parallel_times[threads - 1] = duration_cast<microseconds>(end - start).count();
+        cout << "Parallel time (" << threads << " threads): " << parallel_times[threads - 1] << " µs\n";
 
         int n = s0.length();
         int m = s1.length();
-        if (check_matrix(H1, H2, n, m)) {
-            cout << "Same Matrices" << endl;
+        if (check_matrix(H_seq, H_par, n, m)) {
+            cout << "Same Matrices\n";
         } else {
-            cout << "Different Matrices" << endl;
+            cout << "Different Matrices\n";
         }
     }
 
-    cout << "\n=== Summary of Execution Times ===\n";
-    cout << "N\tSequential (µs)\tParallel (µs)\n";
-    for (int i = 0; i < num_cases; ++i) {
-        unsigned int N = 1 << (i + min_power);
-        cout << N << "\t" << sequential_times[i] << "\t\t" << parallel_times[i] << endl;
+    cout << "\n=== Execution Times for N = " << N << " ===\n";
+    cout << "Threads\tParallel Time (µs)\n";
+    for (int i = 0; i < max_threads; ++i) {
+        cout << (i + 1) << "\t" << parallel_times[i] << "\n";
     }
 
     return 0;
